@@ -65,3 +65,13 @@ observability/grafana/dashboards/fsm-go.json
 - 错误速率
 - 正在执行的状态流转数量
 - 最近一小时幂等命中次数
+
+## Benchmark 对比
+
+项目内置了开启和不开启 Prometheus 可观测性的 100,000 次状态流转 Benchmark：
+
+```bash
+go test -run '^$' -bench BenchmarkRuntimeFire100K -benchtime=1x -benchmem ./test/benchmark
+```
+
+更多说明见 [Benchmark](benchmark.md)。

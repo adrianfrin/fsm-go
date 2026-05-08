@@ -196,6 +196,7 @@ docker pull ghcr.io/flandersrin/fsm-go:v0.1.0
 go test ./...
 go test -race ./...
 go test -count=1 -tags=integration ./test/integration/...
+go test -run '^$' -bench BenchmarkRuntimeFire100K -benchtime=1x -benchmem ./test/benchmark
 ```
 
 集成测试使用 Testcontainers 启动真实 MySQL。
@@ -213,7 +214,7 @@ task test:integration
 go run github.com/go-task/task/v3/cmd/task@v3.50.0 check
 ```
 
-更多说明见 [测试说明](docs/testing.md)。
+更多说明见 [测试说明](docs/testing.md) 和 [Benchmark](docs/benchmark.md)。
 
 ## 项目结构
 
@@ -229,16 +230,9 @@ examples/kafka_message/ Kafka 消费状态机示例
 examples/agent_run/   Agent Run 状态机示例
 cmd/fsm-demo/         可运行 demo 服务
 test/integration/     Testcontainers 集成测试
+test/benchmark/       10 万级状态流转 Benchmark
 docs/                 使用和架构文档
 ```
-
-## 设计取舍
-
-第一版不引入 Protobuf 和 Buf。
-
-当前定位是 Go library，本地调用、DSL、存储接口和 Outbox 已经覆盖核心需求。未来如果要做独立服务或跨语言事件契约，再单独评估协议层。
-
-默认 MySQL 表结构不包含 `tenant_id` 和 `sub_tenant_id`。如果业务需要租户隔离，可以通过自定义 Repository 或插件实现。
 
 更多说明见 [架构说明](docs/architecture.md)。
 

@@ -65,3 +65,13 @@ Panels include:
 - Error rate
 - In-flight transitions
 - Idempotency hits in the last hour
+
+## Benchmark Comparison
+
+The project includes a 100,000 transition benchmark that compares runtime cost with and without Prometheus observability:
+
+```bash
+go test -run '^$' -bench BenchmarkRuntimeFire100K -benchtime=1x -benchmem ./test/benchmark
+```
+
+See [Benchmark](benchmark.md) for details.

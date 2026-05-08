@@ -61,9 +61,3 @@ FSM Go 不是简单的状态枚举工具，而是一个状态治理库。
 - `fsm_outbox`
 
 默认表结构不包含 `tenant_id` 和 `sub_tenant_id`。如果业务需要租户隔离，应通过自定义 Repository 或插件实现。
-
-## 协议取舍
-
-第一版不引入 Protobuf 和 Buf。
-
-当前定位是 Go library，没有强制要求 gRPC 服务、跨语言协议或强事件契约管理。未来如果要做独立服务，再单独设计协议层。

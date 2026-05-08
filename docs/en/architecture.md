@@ -61,9 +61,3 @@ The default MySQL implementation provides four tables:
 - `fsm_outbox`
 
 The default schema does not include `tenant_id` or `sub_tenant_id`. Tenant isolation should be implemented through a custom Repository or plugin.
-
-## Protocol Choice
-
-The first version does not include Protobuf or Buf.
-
-The project is currently a Go library. It does not require a gRPC service, cross-language protocol, or strict event contract management. If FSM Go becomes a standalone service later, the protocol layer should be designed separately.

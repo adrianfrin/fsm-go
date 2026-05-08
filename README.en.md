@@ -48,6 +48,7 @@ Run tests:
 go test ./...
 go test -race ./...
 go test -count=1 -tags=integration ./test/integration/...
+go test -run '^$' -bench BenchmarkRuntimeFire100K -benchtime=1x -benchmem ./test/benchmark
 ```
 
 If Taskfile is installed:
@@ -209,6 +210,7 @@ docker pull ghcr.io/flandersrin/fsm-go:v0.1.0
 - [Docker Demo](docs/en/docker-demo.md)
 - [Observability](docs/en/observability.md)
 - [Testing](docs/en/testing.md)
+- [Benchmark](docs/en/benchmark.md)
 
 ## Project Layout
 
@@ -224,16 +226,9 @@ examples/kafka_message/ Kafka consumer FSM example
 examples/agent_run/     Agent run FSM example
 cmd/fsm-demo/           Runnable demo service
 test/integration/       Testcontainers integration tests
+test/benchmark/         100K transition benchmarks
 docs/                   Chinese and English documentation
 ```
-
-## Design Choices
-
-The first version does not include Protobuf or Buf.
-
-The project is a Go library first. Local calls, DSL, storage interfaces, and Outbox are enough for the current scope. If FSM Go later becomes a standalone service or needs cross-language event contracts, the protocol layer should be evaluated separately.
-
-The default MySQL schema does not include `tenant_id` or `sub_tenant_id`. Tenant isolation should be implemented through a custom Repository or plugin.
 
 ## Contributing
 

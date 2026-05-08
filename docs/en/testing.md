@@ -42,6 +42,16 @@ They cover:
 - Idempotency result reuse.
 - Transactional Outbox writes.
 
+## Benchmark
+
+```bash
+go test -run '^$' -bench BenchmarkRuntimeFire100K -benchtime=1x -benchmem ./test/benchmark
+```
+
+The benchmark runs 100,000 transitions and compares latency and memory allocation with and without Prometheus observability.
+
+See [Benchmark](benchmark.md) for details.
+
 ## Local Check
 
 If Taskfile is installed:
@@ -50,7 +60,7 @@ If Taskfile is installed:
 task check
 ```
 
-This runs formatting checks, module tidy checks, `go vet`, `golangci-lint`, unit tests, race tests, and Testcontainers integration tests.
+This runs formatting checks, module tidy checks, `go vet`, `golangci-lint`, unit tests, race tests, Testcontainers integration tests, and the 100K transition benchmark.
 
 If you do not want to install Taskfile globally:
 

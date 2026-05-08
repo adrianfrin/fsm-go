@@ -40,6 +40,16 @@ go test -count=1 -tags=integration ./test/integration/...
 - 幂等结果复用。
 - Outbox 事务写入。
 
+## Benchmark
+
+```bash
+go test -run '^$' -bench BenchmarkRuntimeFire100K -benchtime=1x -benchmem ./test/benchmark
+```
+
+Benchmark 会执行 100,000 次状态流转，并分别对比不开启可观测性和开启 Prometheus 可观测性的耗时与内存分配。
+
+更多说明见 [Benchmark](benchmark.md)。
+
 ## 本地聚合检查
 
 如果安装了 Taskfile：
@@ -48,7 +58,7 @@ go test -count=1 -tags=integration ./test/integration/...
 task check
 ```
 
-该命令会运行格式检查、依赖整理检查、`go vet`、`golangci-lint`、单元测试、竞态测试和 Testcontainers 集成测试。
+该命令会运行格式检查、依赖整理检查、`go vet`、`golangci-lint`、单元测试、竞态测试、Testcontainers 集成测试和 10 万级 Benchmark。
 
 如果不想全局安装 Taskfile，可以直接运行：
 
