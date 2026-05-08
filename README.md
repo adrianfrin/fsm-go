@@ -49,9 +49,11 @@ go test -race ./...
 
 ```bash
 go run ./examples/order
+go run ./examples/kafka_message
+go run ./examples/agent_run
 ```
 
-预期输出类似：
+订单示例预期输出类似：
 
 ```text
 PENDING -> PAID
@@ -178,7 +180,9 @@ actions/              可复用 Action
 persistence/mysql/    MySQL Repository
 fsmtest/              测试和示例用内存 Repository
 configs/              示例 DSL
-examples/             Go 接入示例
+examples/order/       订单状态机示例
+examples/kafka_message/ Kafka 消费状态机示例
+examples/agent_run/   Agent Run 状态机示例
 cmd/fsm-demo/         可运行 demo 服务
 test/integration/     Testcontainers 集成测试
 docs/                 使用和架构文档

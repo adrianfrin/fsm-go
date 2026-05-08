@@ -108,3 +108,19 @@ actions.RegisterOutbox(registry, map[string]string{
 ```
 
 业务也可以注册自己的 Action，例如写审计、发通知、写业务扩展表。
+
+## 7. 更多示例
+
+仓库内置了三个可运行示例：
+
+```bash
+go run ./examples/order
+go run ./examples/kafka_message
+go run ./examples/agent_run
+```
+
+示例对应的 DSL：
+
+- `configs/order.v1.yaml`
+- `configs/kafka-message.v1.yaml`
+- `configs/agent-run.v1.yaml`

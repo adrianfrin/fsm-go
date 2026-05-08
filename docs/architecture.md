@@ -40,6 +40,14 @@ FSM Go 不是简单的状态枚举工具，而是一个状态治理库。
 | `cmd/fsm-demo` | 可运行 demo 服务 |
 | `test/integration` | Testcontainers 集成测试 |
 
+## 内置示例
+
+| 示例 | DSL | 说明 |
+|---|---|---|
+| `examples/order` | `configs/order.v1.yaml` | 订单支付、发货、完成、取消 |
+| `examples/kafka_message` | `configs/kafka-message.v1.yaml` | Kafka 消费、失败重试、死信 |
+| `examples/agent_run` | `configs/agent-run.v1.yaml` | Agent 规划、运行、工具等待、完成 |
+
 ## 存储边界
 
 核心库只依赖 Repository 接口，不强制绑定 MySQL。

@@ -198,8 +198,7 @@ type memoryTx struct {
 }
 
 func (tx *memoryTx) CreateEntity(_ context.Context, entity StateEntity) error {
-	copied := entity
-	tx.repo.entities[entity.Machine+":"+entity.EntityID] = &copied
+	tx.repo.entities[entity.Machine+":"+entity.EntityID] = new(entity)
 	return nil
 }
 
@@ -208,8 +207,7 @@ func (tx *memoryTx) GetEntity(_ context.Context, machine string, entityID string
 	if !ok {
 		return nil, errors.New("entity not found")
 	}
-	copied := *entity
-	return &copied, nil
+	return new(*entity), nil
 }
 
 func (tx *memoryTx) UpdateStateCAS(_ context.Context, machine string, entityID string, fromState string, toState string, revision int64) (bool, error) {

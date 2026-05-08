@@ -21,9 +21,11 @@ go test -tags=integration ./test/integration/...
 
 ```bash
 go run ./examples/order
+go run ./examples/kafka_message
+go run ./examples/agent_run
 ```
 
-预期输出类似：
+订单示例预期输出类似：
 
 ```text
 PENDING -> PAID
