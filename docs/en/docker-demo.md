@@ -1,15 +1,15 @@
 # Docker Demo
 
-Docker Demo 用于让用户快速看到状态机运行效果。
+The Docker demo lets users quickly see FSM Go running with real MySQL.
 
-它会启动：
+It starts:
 
 - MySQL 8.4
-- `fsm-demo` HTTP 服务
+- `fsm-demo` HTTP service
 - Prometheus
 - Grafana
 
-## 启动
+## Start
 
 ```bash
 docker compose up -d --build
@@ -17,17 +17,17 @@ docker compose up -d --build
 
 ## API
 
-| API | 说明 |
+| API | Description |
 |---|---|
-| `GET /healthz` | 健康检查 |
-| `POST /demo/order/init` | 初始化订单 |
-| `POST /demo/order/fire` | 触发订单状态流转 |
-| `GET /demo/order/{id}` | 查询订单当前状态 |
-| `GET /demo/order/{id}/logs` | 查询订单状态轨迹 |
-| `GET /demo/outbox` | 查询 Outbox 消息 |
-| `GET /metrics` | Prometheus 指标 |
+| `GET /healthz` | Health check |
+| `POST /demo/order/init` | Initialize an order |
+| `POST /demo/order/fire` | Fire an order transition |
+| `GET /demo/order/{id}` | Read current order state |
+| `GET /demo/order/{id}/logs` | Read order state history |
+| `GET /demo/outbox` | Read Outbox messages |
+| `GET /metrics` | Prometheus metrics |
 
-## 示例
+## Example
 
 ```bash
 curl -X POST http://127.0.0.1:8080/demo/order/init \
@@ -49,18 +49,18 @@ curl -X POST http://127.0.0.1:8080/demo/order/fire \
   }'
 ```
 
-## 清理
+## Clean Up
 
 ```bash
 docker compose down -v
 ```
 
-## 观测入口
+## Observability Endpoints
 
 - Prometheus: `http://127.0.0.1:9090`
 - Grafana: `http://127.0.0.1:3000`
 
-Grafana 默认账号：
+Default Grafana login:
 
 ```text
 admin / admin

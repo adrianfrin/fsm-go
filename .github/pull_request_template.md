@@ -7,7 +7,7 @@
 - [ ] `go test ./...`
 - [ ] `go test -race ./...`
 - [ ] `golangci-lint run ./...`
-- [ ] `go test -tags=integration ./test/integration/...`
+- [ ] `go test -count=1 -tags=integration ./test/integration/...`
 
 ## 影响范围
 

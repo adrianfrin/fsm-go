@@ -3,12 +3,14 @@ version: '3'
 tasks:
   check:
     desc: Run all local checks
-    deps:
-      - fmt:check
-      - vet
-      - lint
-      - test
-      - test:race
+    cmds:
+      - task: fmt:check
+      - task: tidy:check
+      - task: vet
+      - task: lint
+      - task: test
+      - task: test:race
+      - task: test:integration
 
   test:
     desc: Run unit tests
@@ -23,7 +25,7 @@ tasks:
   test:integration:
     desc: Run integration tests with Testcontainers
     cmds:
-      - go test -tags=integration ./test/integration/...
+      - go test -count=1 -tags=integration ./test/integration/...
 
   lint:
     desc: Run golangci-lint
@@ -34,6 +36,16 @@ tasks:
     desc: Run go vet
     cmds:
       - go vet ./...
+
+  tidy:check:
+    desc: Check go.mod and go.sum are tidy
+    cmds:
+      - |
+        tmp="$(mktemp -d)"
+        cp go.mod go.sum "$tmp"/
+        go mod tidy
+        diff -u "$tmp/go.mod" go.mod
+        diff -u "$tmp/go.sum" go.sum
 
   fmt:check:
     desc: Check formatting

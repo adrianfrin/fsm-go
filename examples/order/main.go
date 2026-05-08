@@ -3,7 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
+	"os"
 
 	"github.com/flandersrin/fsm-go/actions"
 	"github.com/flandersrin/fsm-go/fsm"
@@ -15,11 +16,13 @@ func main() {
 
 	spec, err := fsm.LoadYAML("configs/order.v1.yaml")
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("load dsl", "error", err)
+		os.Exit(1)
 	}
 	machine, err := fsm.Compile(spec)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("compile dsl", "error", err)
+		os.Exit(1)
 	}
 
 	repo := fsmtest.NewMemoryRepository()
@@ -39,7 +42,8 @@ func main() {
 		Data:           map[string]any{},
 	})
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("create entity", "error", err)
+		os.Exit(1)
 	}
 
 	result, err := runtime.Fire(ctx, fsm.FireCommand{
@@ -56,7 +60,8 @@ func main() {
 		},
 	})
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("fire transition", "error", err)
+		os.Exit(1)
 	}
 
 	fmt.Printf("%s -> %s\n", result.FromState, result.ToState)

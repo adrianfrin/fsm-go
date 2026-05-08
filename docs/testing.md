@@ -28,7 +28,7 @@ go test -race ./...
 ## 集成测试
 
 ```bash
-go test -tags=integration ./test/integration/...
+go test -count=1 -tags=integration ./test/integration/...
 ```
 
 集成测试使用 Testcontainers 启动真实 MySQL，覆盖：
@@ -48,4 +48,10 @@ go test -tags=integration ./test/integration/...
 task check
 ```
 
-该命令会运行格式检查、`go vet`、`golangci-lint`、单元测试和竞态测试。
+该命令会运行格式检查、依赖整理检查、`go vet`、`golangci-lint`、单元测试、竞态测试和 Testcontainers 集成测试。
+
+如果不想全局安装 Taskfile，可以直接运行：
+
+```bash
+go run github.com/go-task/task/v3/cmd/task@v3.50.0 check
+```

@@ -37,6 +37,7 @@ FSM Go 不是简单的状态枚举工具，而是一个状态治理库。
 | `actions` | 可复用 Action |
 | `persistence/mysql` | MySQL Repository 实现 |
 | `fsmtest` | 测试和示例使用的内存 Repository |
+| `observability/prometheus` | Prometheus 指标实现 |
 | `cmd/fsm-demo` | 可运行 demo 服务 |
 | `test/integration` | Testcontainers 集成测试 |
 

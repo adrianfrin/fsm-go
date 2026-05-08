@@ -3,7 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
+	"os"
 
 	"github.com/flandersrin/fsm-go/fsm"
 	"github.com/flandersrin/fsm-go/fsmtest"
@@ -14,11 +15,13 @@ func main() {
 
 	spec, err := fsm.LoadYAML("configs/agent-run.v1.yaml")
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("load dsl", "error", err)
+		os.Exit(1)
 	}
 	machine, err := fsm.Compile(spec)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("compile dsl", "error", err)
+		os.Exit(1)
 	}
 
 	repo := fsmtest.NewMemoryRepository()
@@ -32,7 +35,8 @@ func main() {
 		State:          "DRAFT",
 		Data:           map[string]any{"retryCount": 0},
 	}); err != nil {
-		log.Fatal(err)
+		slog.Error("create entity", "error", err)
+		os.Exit(1)
 	}
 
 	events := []string{"SUBMIT", "PLAN_DONE", "NEED_TOOL", "TOOL_DONE", "FINISH"}
@@ -53,7 +57,8 @@ func main() {
 func mustFire(ctx context.Context, runtime *fsm.Runtime, cmd fsm.FireCommand) *fsm.TransitionResult {
 	result, err := runtime.Fire(ctx, cmd)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("fire transition", "error", err)
+		os.Exit(1)
 	}
 	return result
 }

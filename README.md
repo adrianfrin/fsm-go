@@ -7,6 +7,8 @@ FSM Go 是一个面向生产环境的 Go 状态机库。
 
 它用 DSL 描述状态、事件和流转规则，通过统一入口完成状态变化，并提供 MySQL、状态日志、幂等和 Outbox 示例实现。
 
+English documentation: [README.en.md](README.en.md)
+
 ## 适用场景
 
 - 订单状态流转。
@@ -27,6 +29,8 @@ FSM Go 是一个面向生产环境的 Go 状态机库。
 - 状态迁移日志。
 - 幂等请求复用历史结果。
 - Outbox 事务写入。
+- Prometheus 指标。
+- Grafana 仪表盘。
 - Docker Compose demo。
 - Testcontainers 集成测试。
 
@@ -153,12 +157,45 @@ docker compose down -v
 
 更多说明见 [Docker Demo](docs/docker-demo.md)。
 
+## 可观测性
+
+demo 服务暴露 Prometheus 指标：
+
+```bash
+curl http://127.0.0.1:8080/metrics
+```
+
+Docker Compose 会同时启动 Prometheus 和 Grafana：
+
+```text
+Prometheus: http://127.0.0.1:9090
+Grafana:    http://127.0.0.1:3000
+```
+
+Grafana 默认账号是 `admin / admin`，内置仪表盘会自动加载。
+
+更多说明见 [可观测性](docs/observability.md)。
+
+## Docker Package
+
+发布版本会把 demo 镜像推送到 GitHub Container Registry：
+
+```text
+ghcr.io/flandersrin/fsm-go
+```
+
+拉取示例：
+
+```bash
+docker pull ghcr.io/flandersrin/fsm-go:v0.1.0
+```
+
 ## 测试
 
 ```bash
 go test ./...
 go test -race ./...
-go test -tags=integration ./test/integration/...
+go test -count=1 -tags=integration ./test/integration/...
 ```
 
 集成测试使用 Testcontainers 启动真实 MySQL。
@@ -170,6 +207,12 @@ task check
 task test:integration
 ```
 
+如果不想全局安装 Taskfile，也可以直接运行：
+
+```bash
+go run github.com/go-task/task/v3/cmd/task@v3.50.0 check
+```
+
 更多说明见 [测试说明](docs/testing.md)。
 
 ## 项目结构
@@ -179,6 +222,7 @@ fsm/                  核心状态机库
 actions/              可复用 Action
 persistence/mysql/    MySQL Repository
 fsmtest/              测试和示例用内存 Repository
+observability/        Prometheus 和 Grafana 配置
 configs/              示例 DSL
 examples/order/       订单状态机示例
 examples/kafka_message/ Kafka 消费状态机示例
@@ -201,6 +245,8 @@ docs/                 使用和架构文档
 ## 贡献
 
 欢迎提交 issue 和 pull request。提交前请阅读 [贡献指南](CONTRIBUTING.md)。
+
+贡献者列表见 [CONTRIBUTORS.md](CONTRIBUTORS.md)。
 
 安全问题请参考 [安全说明](SECURITY.md)。
 

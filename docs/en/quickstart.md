@@ -1,23 +1,23 @@
-# 快速开始
+# Quick Start
 
-本文档说明如何在本地运行 FSM Go，并完成一次订单状态流转。
+This guide shows how to run FSM Go locally and execute a state transition.
 
-## 1. 运行测试
+## 1. Run Tests
 
 ```bash
 go test ./...
 go test -race ./...
 ```
 
-如果本机已经安装 Docker，可以运行集成测试：
+If Docker is available, run the integration tests:
 
 ```bash
 go test -count=1 -tags=integration ./test/integration/...
 ```
 
-集成测试会通过 Testcontainers 自动启动真实 MySQL，测试结束后自动清理。
+Integration tests use Testcontainers to start a real MySQL instance and clean it up after the tests finish.
 
-## 2. 运行 Go 示例
+## 2. Run Examples
 
 ```bash
 go run ./examples/order
@@ -25,28 +25,30 @@ go run ./examples/kafka_message
 go run ./examples/agent_run
 ```
 
-订单示例预期输出类似：
+The order example prints:
 
 ```text
 PENDING -> PAID
 logs=1 outbox=1
 ```
 
-这个示例使用内存 Repository，适合快速理解库的接入方式。
+The Kafka example demonstrates a message moving from `RUNNING` to `RETRY`.
 
-## 3. 启动 Docker Demo
+The Agent example demonstrates a run moving through planning, execution, tool waiting, and completion.
+
+## 3. Run Docker Demo
 
 ```bash
 docker compose up -d --build
 ```
 
-健康检查：
+Health check:
 
 ```bash
 curl http://127.0.0.1:8080/healthz
 ```
 
-初始化订单：
+Initialize an order:
 
 ```bash
 curl -X POST http://127.0.0.1:8080/demo/order/init \
@@ -54,7 +56,7 @@ curl -X POST http://127.0.0.1:8080/demo/order/init \
   -d '{"entity_id":"order-10001","data":{}}'
 ```
 
-触发支付成功：
+Fire a payment success event:
 
 ```bash
 curl -X POST http://127.0.0.1:8080/demo/order/fire \
@@ -70,7 +72,7 @@ curl -X POST http://127.0.0.1:8080/demo/order/fire \
   }'
 ```
 
-查看结果：
+Inspect state, logs, and Outbox:
 
 ```bash
 curl http://127.0.0.1:8080/demo/order/order-10001
@@ -78,7 +80,7 @@ curl http://127.0.0.1:8080/demo/order/order-10001/logs
 curl http://127.0.0.1:8080/demo/outbox
 ```
 
-清理环境：
+Clean up:
 
 ```bash
 docker compose down -v

@@ -41,19 +41,27 @@ type TransitionResult struct {
 }
 
 type Runtime struct {
-	repo    Repository
-	actions *ActionRegistry
+	repo      Repository
+	actions   *ActionRegistry
+	observers []Observer
 
 	mu       sync.RWMutex
 	machines map[string]*Machine
 }
 
-func NewRuntime(repo Repository, actions *ActionRegistry) *Runtime {
-	return &Runtime{
+func NewRuntime(repo Repository, actions *ActionRegistry, opts ...RuntimeOption) *Runtime {
+	if actions == nil {
+		actions = NewActionRegistry()
+	}
+	runtime := &Runtime{
 		repo:     repo,
 		actions:  actions,
 		machines: map[string]*Machine{},
 	}
+	for _, opt := range opts {
+		opt(runtime)
+	}
+	return runtime
 }
 
 func (r *Runtime) RegisterMachine(machine *Machine) {
@@ -78,13 +86,18 @@ func (r *Runtime) CreateEntity(ctx context.Context, entity StateEntity) error {
 	})
 }
 
-func (r *Runtime) Fire(ctx context.Context, cmd FireCommand) (*TransitionResult, error) {
+func (r *Runtime) Fire(ctx context.Context, cmd FireCommand) (result *TransitionResult, err error) {
+	startedAt := time.Now()
+	r.observeTransitionStarted(ctx, cmd)
+	defer func() {
+		r.observeTransitionCompleted(ctx, cmd, result, err, time.Since(startedAt))
+	}()
+
 	machine, err := r.GetMachine(cmd.Machine, cmd.MachineVersion)
 	if err != nil {
 		return nil, err
 	}
 
-	var result *TransitionResult
 	err = r.repo.WithTx(ctx, func(ctx context.Context, tx TxRepository) error {
 		if cmd.IdempotencyKey != "" {
 			idem, err := tx.TryGetIdempotency(ctx, cmd.Machine, cmd.IdempotencyKey)

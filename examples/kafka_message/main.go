@@ -3,7 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
+	"os"
 
 	"github.com/flandersrin/fsm-go/actions"
 	"github.com/flandersrin/fsm-go/fsm"
@@ -15,11 +16,13 @@ func main() {
 
 	spec, err := fsm.LoadYAML("configs/kafka-message.v1.yaml")
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("load dsl", "error", err)
+		os.Exit(1)
 	}
 	machine, err := fsm.Compile(spec)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("compile dsl", "error", err)
+		os.Exit(1)
 	}
 
 	repo := fsmtest.NewMemoryRepository()
@@ -39,7 +42,8 @@ func main() {
 		State:          "PENDING",
 		Data:           map[string]any{"retryCount": 0},
 	}); err != nil {
-		log.Fatal(err)
+		slog.Error("create entity", "error", err)
+		os.Exit(1)
 	}
 
 	mustFire(ctx, runtime, fsm.FireCommand{
@@ -62,7 +66,8 @@ func main() {
 func mustFire(ctx context.Context, runtime *fsm.Runtime, cmd fsm.FireCommand) *fsm.TransitionResult {
 	result, err := runtime.Fire(ctx, cmd)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("fire transition", "error", err)
+		os.Exit(1)
 	}
 	return result
 }

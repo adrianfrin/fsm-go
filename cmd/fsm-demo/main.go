@@ -4,20 +4,25 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/flandersrin/fsm-go/actions"
 	"github.com/flandersrin/fsm-go/fsm"
+	fsmprom "github.com/flandersrin/fsm-go/observability/prometheus"
 	mysqlrepo "github.com/flandersrin/fsm-go/persistence/mysql"
 )
 
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	slog.SetDefault(logger)
+
 	ctx := context.Background()
 	dsn := os.Getenv("FSM_MYSQL_DSN")
 	if dsn == "" {
@@ -26,20 +31,23 @@ func main() {
 
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("open mysql", "error", err)
+		os.Exit(1)
 	}
 	defer func() {
 		if err := db.Close(); err != nil {
-			log.Printf("close db: %v", err)
+			slog.Error("close db", "error", err)
 		}
 	}()
 
 	repo := mysqlrepo.NewRepository(db)
 	if err := waitForDB(ctx, db); err != nil {
-		log.Fatal(err)
+		slog.Error("wait for mysql", "error", err)
+		os.Exit(1)
 	}
 	if err := repo.InitSchema(ctx); err != nil {
-		log.Fatal(err)
+		slog.Error("init schema", "error", err)
+		os.Exit(1)
 	}
 
 	registry := fsm.NewActionRegistry()
@@ -50,28 +58,33 @@ func main() {
 		"outbox.order_cancelled": "order.cancelled",
 	})
 
-	runtime := fsm.NewRuntime(repo, registry)
+	metrics := fsmprom.NewObserver()
+	runtime := fsm.NewRuntime(repo, registry, fsm.WithObserver(metrics))
 	spec, err := fsm.LoadYAML("configs/order.v1.yaml")
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("load dsl", "error", err)
+		os.Exit(1)
 	}
 	machine, err := fsm.Compile(spec)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("compile dsl", "error", err)
+		os.Exit(1)
 	}
 	runtime.RegisterMachine(machine)
 
 	server := &demoServer{runtime: runtime, db: db}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", server.health)
+	mux.Handle("GET /metrics", promhttp.HandlerFor(metrics.Registry(), promhttp.HandlerOpts{}))
 	mux.HandleFunc("POST /demo/order/init", server.initOrder)
 	mux.HandleFunc("POST /demo/order/fire", server.fireOrder)
 	mux.HandleFunc("GET /demo/order/", server.getOrder)
 	mux.HandleFunc("GET /demo/outbox", server.listOutbox)
 
-	log.Println("fsm demo listening on :8080")
+	slog.Info("fsm demo listening", "addr", ":8080")
 	if err := http.ListenAndServe(":8080", mux); err != nil {
-		log.Fatal(err)
+		slog.Error("listen and serve", "error", err)
+		os.Exit(1)
 	}
 }
 
@@ -185,7 +198,7 @@ ORDER BY id
 	}
 	defer func() {
 		if err := rows.Close(); err != nil {
-			log.Printf("close log rows: %v", err)
+			slog.Error("close log rows", "error", err)
 		}
 	}()
 
@@ -226,7 +239,7 @@ LIMIT 50
 	}
 	defer func() {
 		if err := rows.Close(); err != nil {
-			log.Printf("close outbox rows: %v", err)
+			slog.Error("close outbox rows", "error", err)
 		}
 	}()
 
