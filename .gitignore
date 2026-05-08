@@ -1,0 +1,22 @@
+# Go
+/bin/
+/dist/
+*.test
+*.out
+coverage.txt
+coverage.out
+
+# Local env
+.env
+.env.*
+
+# macOS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log

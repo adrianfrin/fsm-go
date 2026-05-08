@@ -1,0 +1,51 @@
+version: '3'
+
+tasks:
+  check:
+    desc: Run all local checks
+    deps:
+      - fmt:check
+      - vet
+      - lint
+      - test
+      - test:race
+
+  test:
+    desc: Run unit tests
+    cmds:
+      - go test ./...
+
+  test:race:
+    desc: Run tests with race detector
+    cmds:
+      - go test -race ./...
+
+  test:integration:
+    desc: Run integration tests with Testcontainers
+    cmds:
+      - go test -tags=integration ./test/integration/...
+
+  lint:
+    desc: Run golangci-lint
+    cmds:
+      - golangci-lint run ./...
+
+  vet:
+    desc: Run go vet
+    cmds:
+      - go vet ./...
+
+  fmt:check:
+    desc: Check formatting
+    cmds:
+      - test -z "$(gofmt -l .)"
+
+  demo:up:
+    desc: Start demo service and dependencies
+    cmds:
+      - docker compose up -d --build
+
+  demo:down:
+    desc: Stop demo service and dependencies
+    cmds:
+      - docker compose down -v
