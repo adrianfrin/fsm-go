@@ -76,13 +76,6 @@ func (s *MemoryStore) UpdateInstance(_ context.Context, req workflow.UpdateInsta
 	return nil
 }
 
-func (s *MemoryStore) AppendHistory(_ context.Context, history []workflow.ExecutionHistory) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.appendHistoryLocked(history)
-	return nil
-}
-
 func (s *MemoryStore) ListHistory(_ context.Context, instanceID string) ([]workflow.ExecutionHistory, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -164,43 +157,6 @@ func (s *MemoryStore) GetIdempotency(_ context.Context, scope string, key string
 	defer s.mu.Unlock()
 	id, ok := s.idempotency[scope+":"+key]
 	return id, ok, nil
-}
-
-func (s *MemoryStore) AppendOutbox(_ context.Context, outbox []workflow.OutboxMessage) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, msg := range outbox {
-		s.outbox[msg.ID] = cloneOutbox(msg)
-	}
-	return nil
-}
-
-func (s *MemoryStore) ListOutbox(_ context.Context, limit int) ([]workflow.OutboxMessage, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var out []workflow.OutboxMessage
-	for _, msg := range s.outbox {
-		if limit > 0 && len(out) >= limit {
-			break
-		}
-		if msg.Status == "" || msg.Status == "pending" {
-			out = append(out, cloneOutbox(msg))
-		}
-	}
-	return out, nil
-}
-
-func (s *MemoryStore) MarkOutboxPublished(_ context.Context, id string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	msg, ok := s.outbox[id]
-	if !ok {
-		return workflow.ErrNotFound{Resource: "outbox", ID: id}
-	}
-	msg.Status = "published"
-	msg.UpdatedAt = time.Now().UTC()
-	s.outbox[id] = msg
-	return nil
 }
 
 func (s *MemoryStore) appendHistoryLocked(items []workflow.ExecutionHistory) {

@@ -8,7 +8,9 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/flandersrin/workflow-go/workflow"
@@ -16,6 +18,49 @@ import (
 )
 
 const demoInstanceID = "order-demo-1"
+
+var homePage = template.Must(template.New("home").Parse(`<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>订单流程 Demo</title>
+  <style>
+    body { margin: 0; background: #f7f4ee; color: #20242a; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    main { width: min(760px, calc(100% - 32px)); margin: 32px auto; }
+    h1 { margin: 0 0 8px; font-size: 30px; line-height: 1.15; letter-spacing: 0; }
+    p { margin: 0; color: #667085; }
+    form { display: flex; gap: 10px; margin: 24px 0; }
+    input, button { border: 1px solid #d7d0c4; border-radius: 8px; font: inherit; }
+    input { flex: 1; min-width: 0; padding: 11px 12px; background: #fffdf8; color: #20242a; }
+    button { padding: 11px 16px; background: #1f766f; color: white; font-weight: 700; cursor: pointer; }
+    ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+    li { display: flex; justify-content: space-between; gap: 12px; align-items: center; background: #fffdf8; border: 1px solid #d7d0c4; border-radius: 8px; padding: 12px 14px; }
+    a { color: #1f766f; font-weight: 700; text-decoration: none; overflow-wrap: anywhere; }
+    .hint { margin: 18px 0 10px; font-weight: 700; color: #20242a; }
+    @media (max-width: 560px) {
+      main { width: min(100% - 24px, 760px); margin: 20px auto; }
+      form, li { align-items: stretch; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>订单流程 Demo</h1>
+    <p>输入一个实例 ID，就能打开对应的订单流程时间线。</p>
+    <form method="get" action="/">
+      <input name="instance" placeholder="例如 order-demo-2" value="{{ .DefaultID }}" autocomplete="off">
+      <button type="submit">打开时间线</button>
+    </form>
+    <p class="hint">已有实例</p>
+    <ul>
+      {{ range .Instances }}
+      <li><a href="/instances/{{ .PathID }}/timeline">{{ .ID }}</a><a href="/api/instances/{{ .PathID }}/timeline">JSON</a></li>
+      {{ end }}
+    </ul>
+  </main>
+</body>
+</html>`))
 
 var timelinePage = template.Must(template.New("timeline").Funcs(template.FuncMap{
 	"formatTime": func(t time.Time) string {
@@ -75,7 +120,7 @@ var timelinePage = template.Must(template.New("timeline").Funcs(template.FuncMap
         <h1>订单流程时间线</h1>
         <p>实例 {{ .Instance.ID }} 已跑完一次完整流程。</p>
       </div>
-      <a href="/api/instances/{{ .Instance.ID }}/timeline">查看 JSON</a>
+      <a href="{{ index .Links "json" }}">查看 JSON</a>
     </header>
     <section class="summary" aria-label="流程结果">
       <div class="box"><span class="label">当前状态</span><span class="value">{{ .Instance.State }}</span></div>
@@ -103,8 +148,21 @@ var timelinePage = template.Must(template.New("timeline").Funcs(template.FuncMap
 </html>`))
 
 type demoApp struct {
-	runtime *workflow.Runtime
-	report  workflow.RunReport
+	runtime     *workflow.Runtime
+	mu          sync.Mutex
+	report      workflow.RunReport
+	instanceIDs []string
+	seen        map[string]bool
+}
+
+type homeView struct {
+	DefaultID string
+	Instances []instanceLink
+}
+
+type instanceLink struct {
+	ID     string
+	PathID string
 }
 
 type timelineView struct {
@@ -124,11 +182,13 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", app.redirectToTimeline)
+	mux.HandleFunc("/", app.handleHome)
+	mux.HandleFunc("/timeline", app.handleTimelineByQuery)
+	mux.HandleFunc("/api/timeline", app.handleTimelineJSONByQuery)
 	mux.HandleFunc("/instances/", app.handleTimelinePage)
 	mux.HandleFunc("/api/instances/", app.handleTimelineJSON)
 
-	url := displayURL(*addr, "/instances/"+demoInstanceID+"/timeline")
+	url := displayURL(*addr, "/")
 	fmt.Printf("demo started: %s\n", url)
 	log.Fatal(http.ListenAndServe(*addr, mux))
 }
@@ -139,27 +199,49 @@ func newDemoApp(ctx context.Context) (*demoApp, error) {
 	Register(runtime)
 	RegisterTask(runtime, HandlerPaymentCharge, workflow.TaskHandlerFunc(chargePayment))
 
-	_, err := Start(ctx, runtime, demoInstanceID, map[string]any{"amount": 100, "currency": "CNY"})
-	if err != nil {
+	app := &demoApp{runtime: runtime, seen: map[string]bool{}}
+	if err := app.ensureInstance(ctx, demoInstanceID); err != nil {
 		return nil, err
 	}
-	report, err := runtime.RunDueTasks(ctx, workflow.RunOptions{Limit: 10})
-	if err != nil {
-		return nil, err
-	}
-	return &demoApp{runtime: runtime, report: report}, nil
+	return app, nil
 }
 
 func chargePayment(context.Context, workflow.TaskContext) (workflow.TaskResult, error) {
 	return workflow.TaskResult{Output: map[string]any{"charged": true}}, nil
 }
 
-func (a *demoApp) redirectToTimeline(w http.ResponseWriter, r *http.Request) {
+func (a *demoApp) handleHome(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
 	}
-	http.Redirect(w, r, "/instances/"+demoInstanceID+"/timeline", http.StatusFound)
+	instanceID := cleanInstanceID(r.URL.Query().Get("instance"))
+	if instanceID != "" {
+		http.Redirect(w, r, timelinePagePath(instanceID), http.StatusFound)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := homePage.Execute(w, homeView{DefaultID: "order-demo-2", Instances: a.instanceLinks()}); err != nil {
+		log.Printf("render home: %v", err)
+	}
+}
+
+func (a *demoApp) handleTimelineByQuery(w http.ResponseWriter, r *http.Request) {
+	instanceID := cleanInstanceID(r.URL.Query().Get("instance"))
+	if instanceID == "" {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+	http.Redirect(w, r, timelinePagePath(instanceID), http.StatusFound)
+}
+
+func (a *demoApp) handleTimelineJSONByQuery(w http.ResponseWriter, r *http.Request) {
+	instanceID := cleanInstanceID(r.URL.Query().Get("instance"))
+	if instanceID == "" {
+		http.Error(w, "instance is required", http.StatusBadRequest)
+		return
+	}
+	a.writeTimelineJSON(w, r, instanceID)
 }
 
 func (a *demoApp) handleTimelinePage(w http.ResponseWriter, r *http.Request) {
@@ -185,6 +267,10 @@ func (a *demoApp) handleTimelineJSON(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	a.writeTimelineJSON(w, r, instanceID)
+}
+
+func (a *demoApp) writeTimelineJSON(w http.ResponseWriter, r *http.Request, instanceID string) {
 	view, err := a.timelineView(r.Context(), instanceID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -196,7 +282,51 @@ func (a *demoApp) handleTimelineJSON(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (a *demoApp) ensureInstance(ctx context.Context, instanceID string) error {
+	instanceID = cleanInstanceID(instanceID)
+	if instanceID == "" {
+		return fmt.Errorf("instance id is required")
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.seen[instanceID] {
+		return nil
+	}
+
+	if _, err := Start(ctx, a.runtime, instanceID, map[string]any{"amount": 100, "currency": "CNY"}); err != nil {
+		return err
+	}
+	report, err := a.runtime.RunDueTasks(ctx, workflow.RunOptions{Limit: 10})
+	if err != nil {
+		return err
+	}
+
+	a.instanceIDs = append(a.instanceIDs, instanceID)
+	a.seen[instanceID] = true
+	a.report = report
+	return nil
+}
+
+func (a *demoApp) instanceLinks() []instanceLink {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	out := make([]instanceLink, 0, len(a.instanceIDs))
+	for _, id := range a.instanceIDs {
+		out = append(out, instanceLink{ID: id, PathID: url.PathEscape(id)})
+	}
+	return out
+}
+
+func (a *demoApp) currentReport() workflow.RunReport {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.report
+}
+
 func (a *demoApp) timelineView(ctx context.Context, instanceID string) (timelineView, error) {
+	if err := a.ensureInstance(ctx, instanceID); err != nil {
+		return timelineView{}, err
+	}
 	current, err := a.runtime.GetWorkflow(ctx, instanceID)
 	if err != nil {
 		return timelineView{}, err
@@ -208,10 +338,10 @@ func (a *demoApp) timelineView(ctx context.Context, instanceID string) (timeline
 	return timelineView{
 		Instance: current,
 		History:  history,
-		Report:   a.report,
+		Report:   a.currentReport(),
 		Links: map[string]string{
-			"page": "/instances/" + instanceID + "/timeline",
-			"json": "/api/instances/" + instanceID + "/timeline",
+			"page": timelinePagePath(instanceID),
+			"json": timelineJSONPath(instanceID),
 		},
 	}, nil
 }
@@ -221,10 +351,31 @@ func timelineInstanceID(path string, prefix string) (string, bool) {
 		return "", false
 	}
 	instanceID := strings.TrimSuffix(strings.TrimPrefix(path, prefix), "/timeline")
-	if instanceID == "" || strings.Contains(instanceID, "/") {
+	instanceID, err := url.PathUnescape(instanceID)
+	if err != nil {
+		return "", false
+	}
+	instanceID = cleanInstanceID(instanceID)
+	if instanceID == "" {
 		return "", false
 	}
 	return instanceID, true
+}
+
+func cleanInstanceID(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" || strings.Contains(value, "/") {
+		return ""
+	}
+	return value
+}
+
+func timelinePagePath(instanceID string) string {
+	return "/instances/" + url.PathEscape(instanceID) + "/timeline"
+}
+
+func timelineJSONPath(instanceID string) string {
+	return "/api/instances/" + url.PathEscape(instanceID) + "/timeline"
 }
 
 func displayURL(addr string, path string) string {

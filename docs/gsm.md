@@ -33,6 +33,6 @@ workflow-go 选择把“状态”和“执行”分开。
 - `TaskExecution`：任务执行记录。
 - `ExecutionHistory`：完整时间线。
 - `Store`：持久化接口。
-- `MessagePublisher` / `MessageConsumer`：消息接口。
+- `MessagePublisher`：消息发布接口。
 
 MySQL、PostgreSQL、Kafka 是默认实现，但不是核心绑定。
