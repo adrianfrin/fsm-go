@@ -100,7 +100,7 @@ FROM workflow_history WHERE instance_id = ? ORDER BY created_at, id`), instanceI
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []workflow.ExecutionHistory
 	for rows.Next() {
 		item, err := scanHistory(rows)
@@ -122,7 +122,7 @@ LIMIT ?`), now, limit)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []workflow.TaskExecution
 	for rows.Next() {
 		task, err := scanTask(rows)
@@ -362,16 +362,6 @@ func scanHistory(row scanner) (workflow.ExecutionHistory, error) {
 	item.Event = event.String
 	if err != nil {
 		return workflow.ExecutionHistory{}, err
-	}
-	return item, unmarshal(payload, &item.Payload)
-}
-
-func scanOutbox(row scanner) (workflow.OutboxMessage, error) {
-	var item workflow.OutboxMessage
-	var payload []byte
-	err := row.Scan(&item.ID, &item.Topic, &item.Key, &payload, &item.Status, &item.Attempt, &item.NextRunAt, &item.CreatedAt, &item.UpdatedAt)
-	if err != nil {
-		return workflow.OutboxMessage{}, err
 	}
 	return item, unmarshal(payload, &item.Payload)
 }
