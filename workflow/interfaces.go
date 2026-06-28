@@ -11,26 +11,17 @@ type Store interface {
 	CreateInstance(context.Context, CreateInstanceRequest) error
 	GetInstance(context.Context, string) (*WorkflowInstance, error)
 	UpdateInstance(context.Context, UpdateInstanceRequest) error
-	AppendHistory(context.Context, []ExecutionHistory) error
 	ListHistory(context.Context, string) ([]ExecutionHistory, error)
 	ListDueTasks(context.Context, int, time.Time) ([]TaskExecution, error)
 	MarkTaskRunning(context.Context, string, int) (*TaskExecution, error)
 	CompleteTask(context.Context, CompleteTaskRequest) error
 	RecordIdempotency(context.Context, string, string, string) (bool, error)
 	GetIdempotency(context.Context, string, string) (string, bool, error)
-	AppendOutbox(context.Context, []OutboxMessage) error
-	ListOutbox(context.Context, int) ([]OutboxMessage, error)
-	MarkOutboxPublished(context.Context, string) error
 }
 
 // MessagePublisher 是对外消息系统的最小接口。Kafka 是默认实现，其他消息队列可按此适配。
 type MessagePublisher interface {
 	Publish(context.Context, Message) error
-}
-
-// MessageConsumer 是消息消费的最小接口，消费方必须用 Message.ID 做幂等。
-type MessageConsumer interface {
-	Consume(context.Context, func(context.Context, Message) error) error
 }
 
 // Message 是 workflow-go 与消息系统之间的通用消息格式。

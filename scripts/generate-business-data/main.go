@@ -24,7 +24,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	enc := json.NewEncoder(file)
 	for i := 0; i < *count; i++ {
 		item := seed(*kind, i)

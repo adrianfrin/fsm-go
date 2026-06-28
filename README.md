@@ -15,7 +15,7 @@ workflow-go 是一个面向复杂业务流程编排的 Go 工作流运行时。
 - 状态只表达流程位置。
 - 任务负责真正执行业务动作。
 - 执行历史成为一等数据。
-- 持久化和消息都通过接口接入。
+- 持久化和消息发布通过接口接入。
 - 重试、超时、补偿、恢复由运行时统一处理。
 
 ### Mechanism
@@ -25,7 +25,7 @@ workflow-go 是一个面向复杂业务流程编排的 Go 工作流运行时。
 - `TaskExecution` 记录可恢复任务。
 - `ExecutionHistory` 提供完整时间线。
 - `Store` 抽象持久化。
-- `MessagePublisher` / `MessageConsumer` 抽象消息系统。
+- `MessagePublisher` 抽象消息发布。
 - 默认提供 MySQL、PostgreSQL、Kafka 实现。
 
 ## 适合场景
@@ -34,7 +34,6 @@ workflow-go 是一个面向复杂业务流程编排的 Go 工作流运行时。
 - 审批流程。
 - Saga 编排。
 - 异步任务恢复。
-- Kafka 消费治理。
 - AI Agent Workflow。
 
 ## 快速运行

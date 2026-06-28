@@ -94,19 +94,13 @@ WHERE id = ? AND revision = ?`),
 	})
 }
 
-func (s *Store) AppendHistory(ctx context.Context, items []workflow.ExecutionHistory) error {
-	return s.withTx(ctx, func(tx *sql.Tx) error {
-		return s.insertHistory(ctx, tx, items)
-	})
-}
-
 func (s *Store) ListHistory(ctx context.Context, instanceID string) ([]workflow.ExecutionHistory, error) {
 	rows, err := s.db.QueryContext(ctx, s.q(`SELECT id, instance_id, type, message, state, task_id, task, event, payload, created_at
 FROM workflow_history WHERE instance_id = ? ORDER BY created_at, id`), instanceID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []workflow.ExecutionHistory
 	for rows.Next() {
 		item, err := scanHistory(rows)
@@ -128,7 +122,7 @@ LIMIT ?`), now, limit)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []workflow.TaskExecution
 	for rows.Next() {
 		task, err := scanTask(rows)
@@ -204,38 +198,6 @@ func (s *Store) GetIdempotency(ctx context.Context, scope string, key string) (s
 		return "", false, err
 	}
 	return resultID, true, nil
-}
-
-func (s *Store) AppendOutbox(ctx context.Context, outbox []workflow.OutboxMessage) error {
-	return s.withTx(ctx, func(tx *sql.Tx) error {
-		return s.insertOutbox(ctx, tx, outbox)
-	})
-}
-
-func (s *Store) ListOutbox(ctx context.Context, limit int) ([]workflow.OutboxMessage, error) {
-	rows, err := s.db.QueryContext(ctx, s.q(`SELECT id, topic, msg_key, payload, status, attempt, next_run_at, created_at, updated_at
-FROM workflow_outbox
-WHERE status = 'pending' AND next_run_at <= ?
-ORDER BY next_run_at, id
-LIMIT ?`), time.Now().UTC(), limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out []workflow.OutboxMessage
-	for rows.Next() {
-		msg, err := scanOutbox(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, msg)
-	}
-	return out, rows.Err()
-}
-
-func (s *Store) MarkOutboxPublished(ctx context.Context, id string) error {
-	_, err := s.db.ExecContext(ctx, s.q(`UPDATE workflow_outbox SET status = 'published', updated_at = ? WHERE id = ?`), time.Now().UTC(), id)
-	return err
 }
 
 func (s *Store) appendAll(ctx context.Context, tx *sql.Tx, history []workflow.ExecutionHistory, tasks []workflow.TaskExecution, outbox []workflow.OutboxMessage) error {
@@ -400,16 +362,6 @@ func scanHistory(row scanner) (workflow.ExecutionHistory, error) {
 	item.Event = event.String
 	if err != nil {
 		return workflow.ExecutionHistory{}, err
-	}
-	return item, unmarshal(payload, &item.Payload)
-}
-
-func scanOutbox(row scanner) (workflow.OutboxMessage, error) {
-	var item workflow.OutboxMessage
-	var payload []byte
-	err := row.Scan(&item.ID, &item.Topic, &item.Key, &payload, &item.Status, &item.Attempt, &item.NextRunAt, &item.CreatedAt, &item.UpdatedAt)
-	if err != nil {
-		return workflow.OutboxMessage{}, err
 	}
 	return item, unmarshal(payload, &item.Payload)
 }
